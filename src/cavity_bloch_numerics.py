@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.integrate import solve_ivp
+#from scipy.integrate import solve_ivp
 
 from odeintw import odeintw
 
@@ -239,12 +239,12 @@ def figure2(*args):
 
     a = y[:, 0]
     sigmaz = y[:, 1]
-    sigmax = y[:, 2]
-    sigmay = y[:, 3]
-    a_sigmaz = y[:, 4]
-    a_sigmax = y[:, 5]
-    a_sigmay = y[:, 6]
-    adagger_a = y[:, 7]
+    #sigmax = y[:, 2]
+    #sigmay = y[:, 3]
+    #a_sigmaz = y[:, 4]
+    #a_sigmax = y[:, 5]
+    #a_sigmay = y[:, 6]
+    #adagger_a = y[:, 7]
 
     plt.plot(times, sigmaz, label="sigma_z")
     plt.plot(times, adagger_a, label="adag a")
