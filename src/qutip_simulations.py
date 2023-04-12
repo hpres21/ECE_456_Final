@@ -109,9 +109,7 @@ def pi_pulse():
     a = qt.tensor(qt.destroy(num_levels), qt.qeye(2))
     sigma_m = qt.tensor(qt.qeye(num_levels), qt.destroy(2))
 
-    result = qt.sesolve(
-        H, psi0, times, [sigma_m.dag() * sigma_m, a.dag() * a], args
-    )
+    result = qt.sesolve(H, psi0, times, [sigma_m.dag() * sigma_m, a.dag() * a], args)
 
     plt.plot(times, result.expect[0], label="qubit population")
     plt.plot(times, result.expect[1], label="cavity photon population")
@@ -195,9 +193,7 @@ def short_pi_pulse():
     a = qt.tensor(qt.destroy(num_levels), qt.qeye(2))
     sigma_m = qt.tensor(qt.qeye(num_levels), qt.destroy(2))
 
-    result = qt.sesolve(
-        H, psi0, times, [sigma_m.dag() * sigma_m, a.dag() * a], args
-    )
+    result = qt.sesolve(H, psi0, times, [sigma_m.dag() * sigma_m, a.dag() * a], args)
 
     plt.plot(times, result.expect[0], label="qubit population")
     plt.plot(times, result.expect[1], label="cavity photon population")
