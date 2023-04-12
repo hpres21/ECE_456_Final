@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import qutip as qt
 
+
 def get_Hamiltonian(num_levels, omega_r, omega_a, chi):
 
     a = qt.tensor(qt.destroy(num_levels), qt.qeye(2))
@@ -10,7 +11,10 @@ def get_Hamiltonian(num_levels, omega_r, omega_a, chi):
     sigma_p = qt.tensor(qt.qeye(num_levels), qt.create(2))
 
     hbar = 1
-    H_disp = hbar*(omega_r + chi*sigma_z)*a.dag()*a + hbar/2*(omega_a + chi)*sigma_z
+    H_disp = (
+        hbar * (omega_r + chi * sigma_z) * a.dag() * a
+        + hbar / 2 * (omega_a + chi) * sigma_z
+    )
 
     H_drive_m_plus = a.dag()
     H_drive_m_minus = a
@@ -38,8 +42,14 @@ def get_Hamiltonian(num_levels, omega_r, omega_a, chi):
         omega_s = args["omega_s"]
         return Omega * np.exp(1j * omega_s * t)
 
-    return [H_disp, [H_drive_m_plus, H_drive_m_plus_coeff], [H_drive_m_minus, H_drive_m_minus_coeff],
-            [H_drive_s_plus, H_drive_s_plus_coeff], [H_drive_s_minus, H_drive_s_minus_coeff]]
+    return [
+        H_disp,
+        [H_drive_m_plus, H_drive_m_plus_coeff],
+        [H_drive_m_minus, H_drive_m_minus_coeff],
+        [H_drive_s_plus, H_drive_s_plus_coeff],
+        [H_drive_s_minus, H_drive_s_minus_coeff],
+    ]
+
 
 def get_Hamiltonian_pulse(num_levels, omega_r, omega_a, chi, drive_coeffs):
 
@@ -49,7 +59,10 @@ def get_Hamiltonian_pulse(num_levels, omega_r, omega_a, chi, drive_coeffs):
     sigma_p = qt.tensor(qt.qeye(num_levels), qt.create(2))
 
     hbar = 1
-    H_disp = hbar*(omega_r + chi*sigma_z)*a.dag()*a + hbar/2*(omega_a + chi)*sigma_z
+    H_disp = (
+        hbar * (omega_r + chi * sigma_z) * a.dag() * a
+        + hbar / 2 * (omega_a + chi) * sigma_z
+    )
 
     H_drive_m_plus = a.dag()
     H_drive_m_minus = a
@@ -57,8 +70,14 @@ def get_Hamiltonian_pulse(num_levels, omega_r, omega_a, chi, drive_coeffs):
     H_drive_s_plus = sigma_p
     H_drive_s_minus = sigma_m
 
-    return [H_disp, [H_drive_m_plus, drive_coeffs[0]], [H_drive_m_minus, drive_coeffs[1]],
-            [H_drive_s_plus, drive_coeffs[2]], [H_drive_s_minus, drive_coeffs[3]]]
+    return [
+        H_disp,
+        [H_drive_m_plus, drive_coeffs[0]],
+        [H_drive_m_minus, drive_coeffs[1]],
+        [H_drive_s_plus, drive_coeffs[2]],
+        [H_drive_s_minus, drive_coeffs[3]],
+    ]
+
 
 def pi_pulse():
     omega_r = 6.44252 * 2 * np.pi
@@ -73,7 +92,12 @@ def pi_pulse():
     Omega = 0.025 * 2 * np.pi
     # lamb shift
     omega_s = omega_a + chi
-    args = {"epsilon_m": epsilon_m, "omega_m": omega_m, "Omega": Omega, "omega_s": omega_s}
+    args = {
+        "epsilon_m": epsilon_m,
+        "omega_m": omega_m,
+        "Omega": Omega,
+        "omega_s": omega_s,
+    }
 
     num_levels = 3
     H = get_Hamiltonian(num_levels, omega_r, omega_a, chi)
@@ -85,18 +109,21 @@ def pi_pulse():
     a = qt.tensor(qt.destroy(num_levels), qt.qeye(2))
     sigma_m = qt.tensor(qt.qeye(num_levels), qt.destroy(2))
 
-    result = qt.sesolve(H, psi0, times, [sigma_m.dag()*sigma_m, a.dag()*a], args)
+    result = qt.sesolve(
+        H, psi0, times, [sigma_m.dag() * sigma_m, a.dag() * a], args
+    )
 
     plt.plot(times, result.expect[0], label="qubit population")
     plt.plot(times, result.expect[1], label="cavity photon population")
-    plt.axvline(10, color='red', label="10 ns")
-    plt.axvline(np.pi/Omega, color='orange', label="Pi Pulse")
+    plt.axvline(10, color="red", label="10 ns")
+    plt.axvline(np.pi / Omega, color="orange", label="Pi Pulse")
 
     plt.ylabel("Population")
     plt.xlabel("t (ns)")
 
     plt.legend()
     plt.show()
+
 
 def short_pi_pulse():
     omega_r = 6.44252 * 2 * np.pi
@@ -111,7 +138,14 @@ def short_pi_pulse():
     Omega = 0.025 * 2 * np.pi
     # lamb shift
     omega_s = omega_a + chi
-    args = {"epsilon_m": epsilon_m, "omega_m": omega_m, "Omega": Omega, "omega_s": omega_s, "t1": 10, "t2": 20}
+    args = {
+        "epsilon_m": epsilon_m,
+        "omega_m": omega_m,
+        "Omega": Omega,
+        "omega_s": omega_s,
+        "t1": 10,
+        "t2": 20,
+    }
 
     num_levels = 3
 
@@ -141,7 +175,18 @@ def short_pi_pulse():
         else:
             return 0
 
-    H = get_Hamiltonian_pulse(num_levels, omega_r, omega_a, chi, [H_drive_m_plus_coeff, H_drive_m_minus_coeff, H_drive_s_plus_coeff, H_drive_s_minus_coeff])
+    H = get_Hamiltonian_pulse(
+        num_levels,
+        omega_r,
+        omega_a,
+        chi,
+        [
+            H_drive_m_plus_coeff,
+            H_drive_m_minus_coeff,
+            H_drive_s_plus_coeff,
+            H_drive_s_minus_coeff,
+        ],
+    )
 
     times = np.linspace(0, 50, 500)
 
@@ -150,18 +195,21 @@ def short_pi_pulse():
     a = qt.tensor(qt.destroy(num_levels), qt.qeye(2))
     sigma_m = qt.tensor(qt.qeye(num_levels), qt.destroy(2))
 
-    result = qt.sesolve(H, psi0, times, [sigma_m.dag()*sigma_m, a.dag()*a], args)
+    result = qt.sesolve(
+        H, psi0, times, [sigma_m.dag() * sigma_m, a.dag() * a], args
+    )
 
     plt.plot(times, result.expect[0], label="qubit population")
     plt.plot(times, result.expect[1], label="cavity photon population")
-    plt.axvline(args["t1"], color='red', label=f"{args['t1']} ns")
-    plt.axvline(args["t2"], color='red', label=f"{args['t2']} ns")
+    plt.axvline(args["t1"], color="red", label=f"{args['t1']} ns")
+    plt.axvline(args["t2"], color="red", label=f"{args['t2']} ns")
 
     plt.ylabel("Population")
     plt.xlabel("t (ns)")
 
     plt.legend()
     plt.show()
+
 
 def pi_pulse_decay():
     omega_r = 6.44252 * 2 * np.pi
@@ -182,7 +230,14 @@ def pi_pulse_decay():
     Omega = 0.025 * 2 * np.pi
     # lamb shift
     omega_s = omega_a + chi
-    args = {"epsilon_m": epsilon_m, "omega_m": omega_m, "Omega": Omega, "omega_s": omega_s, "t1": 10, "t2": 20}
+    args = {
+        "epsilon_m": epsilon_m,
+        "omega_m": omega_m,
+        "Omega": Omega,
+        "omega_s": omega_s,
+        "t1": 10,
+        "t2": 20,
+    }
 
     num_levels = 3
 
@@ -212,7 +267,18 @@ def pi_pulse_decay():
         else:
             return 0
 
-    H = get_Hamiltonian_pulse(num_levels, omega_r, omega_a, chi, [H_drive_m_plus_coeff, H_drive_m_minus_coeff, H_drive_s_plus_coeff, H_drive_s_minus_coeff])
+    H = get_Hamiltonian_pulse(
+        num_levels,
+        omega_r,
+        omega_a,
+        chi,
+        [
+            H_drive_m_plus_coeff,
+            H_drive_m_minus_coeff,
+            H_drive_s_plus_coeff,
+            H_drive_s_minus_coeff,
+        ],
+    )
 
     times = np.linspace(0, 200, 1000)
 
@@ -222,20 +288,33 @@ def pi_pulse_decay():
     sigma_m = qt.tensor(qt.qeye(num_levels), qt.destroy(2))
     sigma_z = qt.tensor(qt.qeye(num_levels), -qt.sigmaz())
 
-    collapse_operators = [np.sqrt(kappa) * a, np.sqrt(gamma_1) * sigma_m, np.sqrt(gamma_phi) * sigma_z]
+    collapse_operators = [
+        np.sqrt(kappa) * a,
+        np.sqrt(gamma_1) * sigma_m,
+        np.sqrt(gamma_phi) * sigma_z,
+    ]
 
     options = qt.Options(max_step=1)
-    result = qt.mesolve(H, psi0, times, collapse_operators, [sigma_m.dag() * sigma_m], args, options)
+    result = qt.mesolve(
+        H,
+        psi0,
+        times,
+        collapse_operators,
+        [sigma_m.dag() * sigma_m],
+        args,
+        options,
+    )
 
     plt.plot(times, result.expect[0], label="qubit population")
-    plt.axvline(args["t1"], color='red', label=f"{args['t1']} ns")
-    plt.axvline(args["t2"], color='red', label=f"{args['t2']} ns")
+    plt.axvline(args["t1"], color="red", label=f"{args['t1']} ns")
+    plt.axvline(args["t2"], color="red", label=f"{args['t2']} ns")
 
     plt.ylabel("Population")
     plt.xlabel("t (ns)")
 
     plt.legend()
     plt.show()
+
 
 def pi_pulse_during_measurement():
     omega_r = 6.44252 * 2 * np.pi
@@ -249,14 +328,21 @@ def pi_pulse_during_measurement():
     # gamma_phi not given
     gamma_phi = 2 * gamma_1
 
-    epsilon_m = np.sqrt(kappa/2)
+    epsilon_m = np.sqrt(kappa / 2)
     omega_m = omega_r - chi
 
     # pick omega so that pulse lasts 10 ns
     Omega = 0.025 * 2 * np.pi
     # lamb shift
     omega_s = omega_a + chi
-    args = {"epsilon_m": epsilon_m, "omega_m": omega_m, "Omega": Omega, "omega_s": omega_s, "t1": 800, "t2": 810}
+    args = {
+        "epsilon_m": epsilon_m,
+        "omega_m": omega_m,
+        "Omega": Omega,
+        "omega_s": omega_s,
+        "t1": 800,
+        "t2": 810,
+    }
 
     num_levels = 3
 
@@ -290,9 +376,18 @@ def pi_pulse_during_measurement():
         else:
             return 0
 
-    H = get_Hamiltonian_pulse(num_levels, omega_r, omega_a, chi,
-                              [H_drive_m_plus_coeff, H_drive_m_minus_coeff, H_drive_s_plus_coeff,
-                               H_drive_s_minus_coeff])
+    H = get_Hamiltonian_pulse(
+        num_levels,
+        omega_r,
+        omega_a,
+        chi,
+        [
+            H_drive_m_plus_coeff,
+            H_drive_m_minus_coeff,
+            H_drive_s_plus_coeff,
+            H_drive_s_minus_coeff,
+        ],
+    )
 
     times = np.linspace(0, 1500, 3000)
 
@@ -302,11 +397,22 @@ def pi_pulse_during_measurement():
     sigma_m = qt.tensor(qt.qeye(num_levels), qt.destroy(2))
     sigma_z = qt.tensor(qt.qeye(num_levels), -qt.sigmaz())
 
-    collapse_operators = [np.sqrt(kappa) * a, np.sqrt(gamma_1) * sigma_m, np.sqrt(gamma_phi) * sigma_z]
-
+    collapse_operators = [
+        np.sqrt(kappa) * a,
+        np.sqrt(gamma_1) * sigma_m,
+        np.sqrt(gamma_phi) * sigma_z,
+    ]
 
     options = qt.Options(max_step=1)
-    result = qt.mesolve(H, psi0, times, collapse_operators, [sigma_m.dag() * sigma_m, a.dag()*a, a], args, options)
+    result = qt.mesolve(
+        H,
+        psi0,
+        times,
+        collapse_operators,
+        [sigma_m.dag() * sigma_m, a.dag() * a, a],
+        args,
+        options,
+    )
 
     plt.plot(times, result.expect[0], label="qubit population")
     plt.plot(times, result.expect[1], label="cavity photon population")
@@ -320,6 +426,7 @@ def pi_pulse_during_measurement():
 
     plt.legend()
     plt.show()
+
 
 if __name__ == "__main__":
 
