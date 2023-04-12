@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "src"
+version = "0.1.0"
+description = "Dispersive Single Qubit Readout Project"
+authors = [
+	{name = "Henry Prestegaard", email = "pp8023@princeton.edu"},
+    {name = "Matt Molinelli ", email = "mmolinelli@princeton.edu "},
+    {name = "Ray Chang", email = "raychang@princeton.edu "}
+	]
+license = {file = "LICENSE"}
+readme = "README.rst"
+requires-python = ">=3.7"
+
+[project.optional-dependencies]
+test = [
+	"pytest",
+]
+
+[tool.black]
+line-length = 79
