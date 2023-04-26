@@ -78,8 +78,36 @@ def get_Hamiltonian_pulse(num_levels, omega_r, omega_a, chi, drive_coeffs):
         [H_drive_s_minus, drive_coeffs[3]],
     ]
 
+def get_Hamiltonian_pulse(num_levels, omega_r, omega_a, chi, drive_coeffs):
 
-def pi_pulse():
+    a = qt.tensor(qt.destroy(num_levels), qt.qeye(2))
+    sigma_z = qt.tensor(qt.qeye(num_levels), -qt.sigmaz())
+    sigma_m = qt.tensor(qt.qeye(num_levels), qt.destroy(2))
+    sigma_p = qt.tensor(qt.qeye(num_levels), qt.create(2))
+
+    hbar = 1
+    H_disp = (
+        hbar * (omega_r + chi * sigma_z) * a.dag() * a
+        + hbar / 2 * (omega_a + chi) * sigma_z
+    )
+
+    H_drive_m_plus = a.dag()
+    H_drive_m_minus = a
+
+    H_drive_s_plus = sigma_p
+    H_drive_s_minus = sigma_m
+
+    return [
+        H_disp,
+        [H_drive_m_plus, drive_coeffs[0]],
+        [H_drive_m_minus, drive_coeffs[1]],
+        [H_drive_s_plus, drive_coeffs[2]],
+        [H_drive_s_minus, drive_coeffs[3]],
+    ]
+
+
+
+def rabi_oscillations():
     omega_r = 6.44252 * 2 * np.pi
     omega_a = 4.009 * 2 * np.pi
 
@@ -119,8 +147,67 @@ def pi_pulse():
     plt.ylabel("Population")
     plt.xlabel("t (ns)")
 
+    plt.title("Rabi Oscillations")
+
     plt.legend()
     plt.show()
+
+def rabi_oscillations_with_measurement_and_decay():
+    omega_r = 6.44252 * 2 * np.pi
+    omega_a = 4.009 * 2 * np.pi
+
+    chi = -0.00069 * 2 * np.pi
+
+    kappa = 0.00169 * 2 * np.pi
+    gamma_1 = 0.00019 * 2 * np.pi * 0
+
+    # gamma_phi not given
+    gamma_phi = 2 * gamma_1
+
+    epsilon_m = np.sqrt(kappa/2)
+    omega_m = omega_r - chi
+
+    # pick omega so that pulse lasts 10 ns
+    Omega = 0.025 * 2 * np.pi
+    # lamb shift
+    omega_s = omega_a + chi
+    args = {
+        "epsilon_m": epsilon_m,
+        "omega_m": omega_m,
+        "Omega": Omega,
+        "omega_s": omega_s,
+    }
+
+    num_levels = 10
+    H = get_Hamiltonian(num_levels, omega_r, omega_a, chi)
+    # H = get_Hamiltonian_pulse(num_levels, omega_r, omega_a, chi)
+
+    times = np.linspace(0, 1500, 10000)
+
+    psi0 = qt.tensor(qt.basis(num_levels, 0), qt.basis(2, 1))
+
+    a = qt.tensor(qt.destroy(num_levels), qt.qeye(2))
+    sigma_m = qt.tensor(qt.qeye(num_levels), qt.destroy(2))
+    sigma_z = qt.tensor(qt.qeye(num_levels), -qt.sigmaz())
+
+    collapse_operators = [
+        np.sqrt(kappa) * a,
+        np.sqrt(gamma_1) * sigma_m,
+        np.sqrt(gamma_phi) * sigma_z,
+    ]
+    result = qt.mesolve(H, psi0, times, collapse_operators, [sigma_m.dag() * sigma_m, a.dag() * a], args)
+
+    plt.plot(times, result.expect[0], label="qubit population")
+    plt.plot(times, result.expect[1], label="cavity photon population")
+
+    plt.ylabel("Population")
+    plt.xlabel("t (ns)")
+
+    plt.title("Rabi Oscillations")
+
+    plt.legend()
+    plt.show()
+
 
 
 def short_pi_pulse():
@@ -202,6 +289,8 @@ def short_pi_pulse():
 
     plt.ylabel("Population")
     plt.xlabel("t (ns)")
+
+    plt.title("Pi Pulse")
 
     plt.legend()
     plt.show()
@@ -308,6 +397,8 @@ def pi_pulse_decay():
     plt.ylabel("Population")
     plt.xlabel("t (ns)")
 
+    plt.title("Pi Pulse with decay")
+
     plt.legend()
     plt.show()
 
@@ -336,11 +427,11 @@ def pi_pulse_during_measurement():
         "omega_m": omega_m,
         "Omega": Omega,
         "omega_s": omega_s,
-        "t1": 800,
-        "t2": 810,
+        "t1": 200,
+        "t2": 210,
     }
 
-    num_levels = 3
+    num_levels = 5
 
     def H_drive_m_plus_coeff(t, args):
         epsilon_m = args["epsilon_m"]
@@ -385,9 +476,11 @@ def pi_pulse_during_measurement():
         ],
     )
 
-    times = np.linspace(0, 1500, 3000)
+    times = np.linspace(0, 1000, 1000)
 
-    psi0 = qt.tensor(qt.basis(num_levels, 0), qt.basis(2, 0))
+    alpha = 1j
+    psi0 = qt.tensor(qt.coherent(num_levels, alpha), qt.basis(2, 0))
+    # psi0 = qt.tensor(qt.basis(num_levels, 0), qt.basis(2, 0))
 
     a = qt.tensor(qt.destroy(num_levels), qt.qeye(2))
     sigma_m = qt.tensor(qt.qeye(num_levels), qt.destroy(2))
@@ -399,7 +492,8 @@ def pi_pulse_during_measurement():
         np.sqrt(gamma_phi) * sigma_z,
     ]
 
-    options = qt.Options(max_step=1)
+    options = qt.Options(max_step=1, nsteps=10000)
+    # options = qt.Options()
     result = qt.mesolve(
         H,
         psi0,
@@ -413,12 +507,14 @@ def pi_pulse_during_measurement():
     plt.plot(times, result.expect[0], label="qubit population")
     plt.plot(times, result.expect[1], label="cavity photon population")
     plt.plot(times, np.real(result.expect[2]), label="I")
-    plt.plot(times, np.imag(result.expect[2]), label="Q")
+    # plt.plot(times, np.imag(result.expect[2]), label="Q")
     # plt.axvline(args["t1"], color='red', label=f"{args['t1']} ns")
     # plt.axvline(args["t2"], color='red', label=f"{args['t2']} ns")
 
     plt.ylabel("Population")
     plt.xlabel("t (ns)")
+
+    plt.title("Pi Pulse with measurement drive")
 
     plt.legend()
     plt.show()
@@ -426,7 +522,7 @@ def pi_pulse_during_measurement():
 
 if __name__ == "__main__":
 
-    # pi_pulse()
+    # rabi_oscillations_with_measurement_and_decay()
     # short_pi_pulse()
     # pi_pulse_decay()
     pi_pulse_during_measurement()
