@@ -2,225 +2,192 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import solve_ivp
 
-from odeintw import odeintw
+from cavity_bloch_util import cavity_bloch_equations_resonant_time_drive_short_pulse, \
+    cavity_bloch_equations_resonant_time_drive_pulsed_measurement
 
 
-def cavity_bloch_equations(t, y, *args):
-    """
-
-    :param y:
-    :param t:
-    :param args: (delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi)
-    :return:
-    """
-
-    delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi = args
-
-    a = y[0]
-    sigmaz = y[1]
-    sigmax = y[2]
-    sigmay = y[3]
-    a_sigmaz = y[4]
-    a_sigmax = y[5]
-    a_sigmay = y[6]
-    adagger_a = y[7]
-
-    ydot = np.array([0j] * len(y))
-
-    ydot[0] = -1j * delta_rm * a - 1j * chi * a_sigmaz - 1j * epsilon_m - kappa / 2 * a
-    ydot[1] = Omega * sigmay - gamma_1 * (1 + sigmaz)
-    ydot[2] = -(delta_as + 2 * chi * (adagger_a + 1 / 2)) * sigmay - (gamma_1 / 2 + gamma_phi) * sigmax
-    ydot[3] = (delta_as + 2 * chi * (adagger_a + 1 / 2)) * sigmax - (gamma_1 / 2 + gamma_phi) * sigmay - Omega * sigmaz
-    ydot[
-        4] = -1j * delta_rm * a_sigmaz - 1j * 1j * chi * a + Omega * a_sigmay - 1j * epsilon_m * sigmaz - gamma_1 * a - (
-                gamma_1 + kappa / 2) * a_sigmaz
-    ydot[5] = -1j * delta_rm * a_sigmax - (
-                delta_as + 2 * chi * (adagger_a + 1)) * a_sigmay - 1j * epsilon_m * sigmax - (
-                          gamma_1 / 2 + gamma_phi + kappa / 2) * a_sigmax
-    ydot[6] = -1j * delta_rm * a_sigmay + (
-                delta_as + 2 * chi * (adagger_a + 1)) * a_sigmax - 1j * epsilon_m * sigmay - (
-                          gamma_1 / 2 + gamma_phi + kappa / 2) * a_sigmay - Omega * a_sigmaz
-    ydot[7] = -2 * epsilon_m * np.imag(a) - kappa * adagger_a
-
-    return ydot
-
-def cavity_bloch_equations_short_pulse(t, y, *args):
-    """
-
-    :param y:
-    :param t:
-    :param args: (delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi)
-    :return:
-    """
-
-    delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi = args
-
-    t1 = 100
-    t2 = t1 + 10
-    if not t1 < t < t2:
-        Omega = 0
-
-    a = y[0]
-    sigmaz = y[1]
-    sigmax = y[2]
-    sigmay = y[3]
-    a_sigmaz = y[4]
-    a_sigmax = y[5]
-    a_sigmay = y[6]
-    adagger_a = y[7]
-
-    ydot = np.array([0j] * len(y))
-
-    ydot[0] = -1j * delta_rm * a - 1j * chi * a_sigmaz - 1j * epsilon_m - kappa / 2 * a
-    ydot[1] = Omega * sigmay - gamma_1 * (1 + sigmaz)
-    ydot[2] = -(delta_as + 2 * chi * (adagger_a + 1 / 2)) * sigmay - (gamma_1 / 2 + gamma_phi) * sigmax
-    ydot[3] = (delta_as + 2 * chi * (adagger_a + 1 / 2)) * sigmax - (gamma_1 / 2 + gamma_phi) * sigmay - Omega * sigmaz
-    ydot[
-        4] = -1j * delta_rm * a_sigmaz - 1j * 1j * chi * a + Omega * a_sigmay - 1j * epsilon_m * sigmaz - gamma_1 * a - (
-                gamma_1 + kappa / 2) * a_sigmaz
-    ydot[5] = -1j * delta_rm * a_sigmax - (
-                delta_as + 2 * chi * (adagger_a + 1)) * a_sigmay - 1j * epsilon_m * sigmax - (
-                          gamma_1 / 2 + gamma_phi + kappa / 2) * a_sigmax
-    ydot[6] = -1j * delta_rm * a_sigmay + (
-                delta_as + 2 * chi * (adagger_a + 1)) * a_sigmax - 1j * epsilon_m * sigmay - (
-                          gamma_1 / 2 + gamma_phi + kappa / 2) * a_sigmay - Omega * a_sigmaz
-    ydot[7] = -2 * epsilon_m * np.imag(a) - kappa * adagger_a
-
-    return ydot
+def rotate_IQ(a):
+    # want last element of Q to be fully imaginary
+    last = a[-1]
+    return a * 1j * np.conjugate(last) / np.abs(last)
 
 
-def cavity_bloch_equations_resonant_time_drive(t, y, *args):
-    """
+def figure2bc(*args):
+    # for this experiment
 
-    uses delta_as = - 2*chi*(adagger_a + 1/2)
+    omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi = args
 
-    :param y:
-    :param t:
-    :param args: (delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi)
-    :return:
-    """
+    epsilon_m = np.sqrt(kappa / 2)
+    omega_m = omega_r - chi
 
-    delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi = args
+    omega_s = omega_a + 3 * chi
+    delta_as = omega_a - omega_s
+    delta_rm = omega_r - omega_m
 
-    a = y[0]
-    sigmaz = y[1]
-    sigmax = y[2]
-    sigmay = y[3]
-    a_sigmaz = y[4]
-    a_sigmax = y[5]
-    a_sigmay = y[6]
-    adagger_a = y[7]
+    Omega = 0.05 * 2 * np.pi
 
-    ydot = np.array([0j] * len(y))
+    args = delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi
 
-    ydot[0] = -1j * delta_rm * a - 1j * chi * a_sigmaz - 1j * epsilon_m - kappa / 2 * a
-    ydot[1] = Omega * sigmay - gamma_1 * (1 + sigmaz)
-    ydot[2] = - (gamma_1 / 2 + gamma_phi) * sigmax
-    ydot[3] = - (gamma_1 / 2 + gamma_phi) * sigmay - Omega * sigmaz
-    ydot[
-        4] = -1j * delta_rm * a_sigmaz - 1j * 1j * chi * a + Omega * a_sigmay - 1j * epsilon_m * sigmaz - gamma_1 * a - (
-            gamma_1 + kappa / 2) * a_sigmaz
-    ydot[5] = -1j * delta_rm * a_sigmax - chi * a_sigmay - 1j * epsilon_m * sigmax - (
-            gamma_1 / 2 + gamma_phi + kappa / 2) * a_sigmax
-    ydot[6] = -1j * delta_rm * a_sigmay + chi * a_sigmax - 1j * epsilon_m * sigmay - (
-            gamma_1 / 2 + gamma_phi + kappa / 2) * a_sigmay - Omega * a_sigmaz
-    ydot[7] = -2 * epsilon_m * np.imag(a) - kappa * adagger_a
+    # initial variables
 
-    return ydot
+    # steady state
+    a0 = -epsilon_m / (delta_rm - chi - 1j * kappa / 2)
+    sigmaz0 = -1
+    sigmax0 = 0
+    sigmay0 = 0
+    a_sigmaz0 = a0 * sigmaz0
+    a_sigmax0 = a0 * sigmax0
+    a_sigmay0 = a0 * sigmay0
+    adagger_a0 = -2 * epsilon_m / kappa * np.imag(a0)
 
+    print(f"a0 ss = {a0}")
+    print(f"adagger_a0 ss = {adagger_a0}")
 
-def cavity_bloch_equations_resonant_time_drive_short_pulse(t, y, *args):
-    """
+    y0 = np.array([a0, sigmaz0, sigmay0, sigmax0, a_sigmaz0, a_sigmay0, a_sigmax0, adagger_a0])
 
-    uses delta_as = - 2*chi*(adagger_a + 1/2)
-    Pi pulse only happens between t1 and t2
+    num_points = 2000
+    tspan = (0, 2000)
+    times = np.linspace(*tspan, num_points)
 
-    :param y:
-    :param t:
-    :param args: (delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi)
-    :return:
-    """
+    result = solve_ivp(cavity_bloch_equations_resonant_time_drive_short_pulse, tspan, y0, t_eval=times, args=args,
+                       max_step=1)
 
-    delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi = args
+    y = result.y
 
-    t1 = 100
-    t2 = t1 + 10
-    if not t1 < t < t2:
-        Omega = 0
+    a = y[0, :]
+    sigmaz = np.real(y[1, :])
+    sigmax = np.real(y[2, :])
+    sigmay = np.real(y[3, :])
+    a_sigmaz = y[4, :]
+    a_sigmax = y[5, :]
+    a_sigmay = y[6, :]
+    adagger_a = np.real(y[7, :])
 
-    a = y[0]
-    sigmaz = y[1]
-    sigmax = y[2]
-    sigmay = y[3]
-    a_sigmaz = y[4]
-    a_sigmax = y[5]
-    a_sigmay = y[6]
-    adagger_a = y[7]
+    # plt.plot(result.t, sigmaz, label="sigma_z")
+    # plt.plot(result.t, adagger_a, label="adag a")
+    plt.plot(result.t, np.real(a), label="I")
+    plt.plot(result.t, np.imag(a), label="Q")
 
-    ydot = np.array([0j] * len(y))
+    # plt.plot(result.t, sigmax, label="sigmax")
+    # plt.plot(result.t, sigmay, label="sigmay")
+    # plt.plot(result.t, np.imag(a_sigmax), label="imag(a_sigmax)")
+    # plt.plot(result.t, np.imag(a_sigmay), label="imag(a_sigmay)")
+    # plt.plot(result.t, np.imag(a_sigmaz), label="imag(a_sigmaz)")
 
-    ydot[0] = -1j * delta_rm * a - 1j * chi * a_sigmaz - 1j * epsilon_m - kappa / 2 * a
-    ydot[1] = Omega * sigmay - gamma_1 * (1 + sigmaz)
-    ydot[2] = - (gamma_1 / 2 + gamma_phi) * sigmax
-    ydot[3] = - (gamma_1 / 2 + gamma_phi) * sigmay - Omega * sigmaz
-    ydot[
-        4] = -1j * delta_rm * a_sigmaz - 1j * 1j * chi * a + Omega * a_sigmay - 1j * epsilon_m * sigmaz - gamma_1 * a - (
-            gamma_1 + kappa / 2) * a_sigmaz
-    ydot[5] = -1j * delta_rm * a_sigmax - chi * a_sigmay - 1j * epsilon_m * sigmax - (
-            gamma_1 / 2 + gamma_phi + kappa / 2) * a_sigmax
-    ydot[6] = -1j * delta_rm * a_sigmay + chi * a_sigmax - 1j * epsilon_m * sigmay - (
-            gamma_1 / 2 + gamma_phi + kappa / 2) * a_sigmay - Omega * a_sigmaz
-    ydot[7] = -2 * epsilon_m * np.imag(a) - kappa * adagger_a
+    plt.xlabel("t (ns)")
+    plt.ylabel("Populations")
 
-    return ydot
+    plt.title("Pi Pulse with decay")
 
-def cavity_bloch_equations_resonant_time_drive_short_pulse_test(t, y, *args):
-    """
+    plt.legend()
+    plt.show()
 
-    uses delta_as = - 2*chi*(adagger_a + 1/2)
-    Pi pulse only happens between t1 and t2
-
-    :param y:
-    :param t:
-    :param args: (delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi)
-    :return:
-    """
-
-    delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi = args
-
-    t1 = 100
-    t2 = t1 + 10
-    if not t1 < t < t2:
-        Omega = 0
-
-    a = y[0]
-    sigmaz = y[1]
-    sigmax = y[2]
-    sigmay = y[3]
-    a_sigmaz = y[4]
-    a_sigmax = y[5]
-    a_sigmay = y[6]
-    adagger_a = y[7]
-
-    ydot = np.array([0j] * len(y))
-
-    ydot[0] = -1j * delta_rm * a - 1j * epsilon_m - kappa / 2 * a
-    ydot[1] = Omega * sigmay - gamma_1 * (1 + sigmaz)
-    ydot[2] = - (gamma_1 / 2 + gamma_phi) * sigmax
-    ydot[3] = - (gamma_1 / 2 + gamma_phi) * sigmay - Omega * sigmaz
-    ydot[
-        4] = -1j * delta_rm * a_sigmaz - 1j * 1j * chi * a + Omega * a_sigmay - 1j * epsilon_m * sigmaz - gamma_1 * a - (
-            gamma_1 + kappa / 2) * a_sigmaz
-    ydot[5] = -1j * delta_rm * a_sigmax - chi * a_sigmay - 1j * epsilon_m * sigmax - (
-            gamma_1 / 2 + gamma_phi + kappa / 2) * a_sigmax
-    ydot[6] = -1j * delta_rm * a_sigmay + chi * a_sigmax - 1j * epsilon_m * sigmay - (
-            gamma_1 / 2 + gamma_phi + kappa / 2) * a_sigmay - Omega * a_sigmaz
-    ydot[7] = -2 * epsilon_m * np.imag(a) - kappa * adagger_a
-
-    return ydot
+    plt.show()
 
 
-def figure2(*args):
+def figure2cd(*args):
+    omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi = args
+
+    epsilon_m = np.sqrt(kappa / 2)
+
+    omega_s = omega_a + 3 * chi
+    delta_as = omega_a - omega_s
+
+    Omega = 0.05 * 2 * np.pi
+
+    num_points = 2501
+    tspan = (-500, 2000)
+    times = np.linspace(*tspan, num_points)
+
+    delta_rms = np.linspace(5 * chi, -4 * chi, 100)
+
+    sweep_data = np.zeros((len(delta_rms), num_points), dtype=complex)
+
+    for i in range(len(delta_rms)):
+        delta_rm = delta_rms[i]
+
+        args = delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi
+
+        # initial variables
+
+        # steady state
+        a0 = -epsilon_m / (delta_rm - chi - 1j * kappa / 2)
+        sigmaz0 = -1
+        sigmax0 = 0
+        sigmay0 = 0
+        a_sigmaz0 = a0 * sigmaz0
+        a_sigmax0 = a0 * sigmax0
+        a_sigmay0 = a0 * sigmay0
+        adagger_a0 = -2 * epsilon_m / kappa * np.imag(a0)
+
+        y0 = np.array([a0, sigmaz0, sigmay0, sigmax0, a_sigmaz0, a_sigmay0, a_sigmax0, adagger_a0])
+
+        result = solve_ivp(cavity_bloch_equations_resonant_time_drive_short_pulse, tspan, y0, t_eval=times, args=args,
+                           max_step=1)
+
+        y = result.y
+
+        a = y[0, :]
+        sigmaz = np.real(y[1, :])
+        sigmax = np.real(y[2, :])
+        sigmay = np.real(y[3, :])
+        a_sigmaz = y[4, :]
+        a_sigmax = y[5, :]
+        a_sigmay = y[6, :]
+        adagger_a = np.real(y[7, :])
+
+        a = rotate_IQ(a)
+
+        sweep_data[i, :] = a
+
+        # # plt.plot(result.t, sigmaz, label="sigma_z")
+        # # plt.plot(result.t, adagger_a, label="adag a")
+        # plt.plot(result.t, np.abs(np.real(a)), label="I")
+        # plt.plot(result.t, np.abs(np.imag(a)), label="Q")
+        #
+        # plt.xlabel("t (ns)")
+        # plt.ylabel("Populations")
+        #
+        # plt.title("Pi Pulse with decay")
+        #
+        # plt.legend()
+        # plt.show()
+        #
+        # plt.show()
+
+    t = np.copy(times) / 1000
+    t_step = t[1] - t[0]
+    delta_rm_step = (delta_rms[-1] - delta_rms[0]) / (len(delta_rms) - 1)
+
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+
+    axes[0].imshow(np.abs(np.imag(sweep_data)), cmap='Reds', vmin=-1, vmax=16, aspect='auto', origin='lower',
+                   extent=(t[0] - t_step / 2, t[-1] + t_step / 2, (delta_rms[0] - delta_rm_step / 2) / chi,
+                           (delta_rms[-1] + delta_rm_step / 2) / chi), )
+    # plt.colorbar()
+    axes[0].set_xlabel("Times $[\mu s]$")
+    axes[0].set_xticks(np.arange(0, 1.6, 0.5))
+    axes[0].set_ylabel("Detuning $\Delta_{rm}/\chi$")
+    axes[0].set_title("Q")
+
+    axes[1].imshow(np.abs(np.real(sweep_data)), cmap='Reds', vmin=0, vmax=14, aspect='auto', origin='lower',
+                   extent=(t[0] - t_step / 2, t[-1] + t_step / 2, (delta_rms[0] - delta_rm_step / 2) / chi,
+                           (delta_rms[-1] + delta_rm_step / 2) / chi))
+    # plt.colorbar()
+    axes[1].set_xlabel("Times $[\mu s]$")
+    axes[1].set_xticks(np.arange(0, 1.6, 0.5))
+    axes[1].set_title("I")
+    axes[1].set_yticklabels([])
+    axes[1].tick_params(axis='y', direction="inout", length=10)
+
+    plt.title("Cavity response to a weak measurement")
+
+    fig.subplots_adjust(wspace=0)
+    plt.show()
+
+
+
+def figure4(*args):
     # for this experiment
 
     omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi = args
@@ -232,43 +199,42 @@ def figure2(*args):
     delta_as = omega_a - omega_s
     delta_rm = omega_r - omega_m
 
-    print(delta_as)
-    print(kappa/2/np.pi)
-    print(chi/2/np.pi)
-
     Omega = 0.05 * 2 * np.pi
 
     # epsilon_m = 0
     # gamma_1 = 0
     # gamma_phi = 0
 
+    Omega = 0
+
     args = delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi
 
     # initial variables
 
     # alpha = 1j
-    alpha = 10j
+    alpha = 2j
 
-    a0 = alpha
+    # single photon fock state
+    # a0 = (-1j * (delta_rm + epsilon_m) * (1j * delta_rm + gamma_1 + kappa / 2) + chi * epsilon_m) / (
+    #             kappa / 2 * (1j * delta_rm + gamma_1 + kappa / 2) - 1j * chi * (1j * chi + gamma_1))
+    a0 = 1j
     sigmaz0 = -1
     sigmax0 = 0
     sigmay0 = 0
-    a_sigmaz0 = a0*sigmaz0
-    a_sigmax0 = a0*sigmax0
-    a_sigmay0 = a0*sigmay0
-    adagger_a0 = np.power(np.abs(alpha), 2)
+    a_sigmaz0 = a0 * sigmaz0
+    a_sigmax0 = a0 * sigmax0
+    a_sigmay0 = a0 * sigmay0
+    # adagger_a0 = -2 * epsilon_m / kappa * np.imag(a0)
+    adagger_a0 = 0
 
     y0 = np.array([a0, sigmaz0, sigmay0, sigmax0, a_sigmaz0, a_sigmay0, a_sigmax0, adagger_a0])
 
     num_points = 2000
     tspan = (0, 1500)
     times = np.linspace(*tspan, num_points)
-    # y, infodict = odeintw(cavity_bloch_equations_resonant_time_drive_short_pulse, y0, times, args=args,
-    #                       full_output=True)
 
-
-    # result = solve_ivp(cavity_bloch_equations_short_pulse, tspan, y0, method="DOP853", t_eval=times, args=args, max_step=1, dense_output=True)
-    result = solve_ivp(cavity_bloch_equations_resonant_time_drive_short_pulse_test, tspan, y0, t_eval=times, args=args, max_step=1)
+    result = solve_ivp(cavity_bloch_equations_resonant_time_drive_pulsed_measurement, tspan, y0, t_eval=times,
+                       args=args, max_step=1)
 
     # result = solve_ivp(cavity_bloch_equations_short_pulse, tspan, y0, t_eval=times, args=args, max_step=1)
 
@@ -293,7 +259,7 @@ def figure2(*args):
     plt.xlabel("t (ns)")
     plt.ylabel("Populations")
 
-    plt.title("Pi Pulse with decay")
+    plt.title("Strong Measurement")
 
     plt.legend()
     plt.show()
@@ -316,7 +282,8 @@ def cavity_bloch_numerical():
     # gamma_phi not given
     gamma_phi = 2 * gamma_1
 
-    figure2(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
+    figure2cd(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
+    # figure4(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
 
 
 if __name__ == "__main__":
