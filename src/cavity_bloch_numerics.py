@@ -271,8 +271,91 @@ def figure3(*args):
     plt.tight_layout()
     plt.show()
 
-
 def figure4(*args):
+    omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi = args
+
+    epsilon_m = np.sqrt(kappa / 2)
+    omega_m = omega_r - chi
+    # omega_m = omega_r + chi
+
+    omega_s = omega_a + chi
+    delta_as = omega_a - omega_s
+    delta_rm = omega_r - omega_m
+    Omega = 0
+
+
+    # initial variables
+    alpha = 1j
+
+    a0 = 0j
+    sigmaz0 = 1
+    sigmax0 = 0
+    sigmay0 = 0
+    a_sigmaz0 = a0*sigmaz0
+    a_sigmax0 = a0*sigmax0
+    a_sigmay0 = a0*sigmay0
+    adagger_a0 = 0
+
+    y0 = np.array([a0, sigmaz0, sigmay0, sigmax0, a_sigmaz0, a_sigmay0, a_sigmax0, adagger_a0])
+    y1 = np.array([a0, -1, sigmay0, sigmax0, a_sigmaz0, a_sigmay0, a_sigmax0, adagger_a0])
+
+
+    args = delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi
+
+    num_points = 2000
+    tspan = (0, 2000)
+    times = np.linspace(*tspan, num_points)
+
+    result = solve_ivp(cavity_bloch_equations_resonant_time_drive_short_pulse, tspan, y0, t_eval=times, args=args,max_step=1)
+    result2 = solve_ivp(cavity_bloch_equations_resonant_time_drive_short_pulse, tspan, y1, t_eval=times, args=args,max_step=1)
+    y = result.y
+    y2 = result2.y
+
+    a = y[0, :]
+    sigmaz = np.real(y[1, :])
+    sigmax = np.real(y[2, :])
+    sigmay = np.real(y[3, :])
+    a_sigmaz = y[4, :]
+    a_sigmax = y[5, :]
+    a_sigmay = y[6, :]
+    adagger_a = np.real(y[7, :])
+    new_a = rotate_IQ(a)
+
+    a2 = y2[0, :]
+    sigmaz2 = np.real(y2[1, :])
+    sigmax2 = np.real(y2[2, :])
+    sigmay2 = np.real(y2[3, :])
+    a_sigmaz2 = y2[4, :]
+    a_sigmax2 = y2[5, :]
+    a_sigmay2 = y2[6, :]
+    adagger_a2 = np.real(y2[7, :])
+    new_a2 = rotate_IQ(a2)
+
+    fig,ax = plt.subplots(3,1,figsize=(8,15))
+    ax[0].plot(result.t/1000, np.abs(np.imag(new_a)), label="|e>",c='red')
+    ax[0].plot(result.t/1000, np.abs(np.imag(new_a2)), label="|g>",c='blue')
+    ax[0].set_xlabel("Time (us)")
+    ax[0].set_ylabel("Q [a.u.]")
+    ax[0].set_title("Figure 4")
+    ax[0].legend()
+
+    ax[1].plot(result.t/1000,np.abs(np.real(new_a)),label='|e>',c='red')
+    ax[1].plot(result.t/1000,np.abs(np.real(new_a2)),label='|g>',c='blue')
+    ax[1].legend()
+    ax[1].set_xlabel("Time (us)")
+    ax[1].set_ylabel("I [a.u.]")
+    ax[1].set_ylim(0,14)
+
+    ax[2].scatter(np.abs(np.imag(new_a)[::5]),np.abs(np.real(new_a)[::5]),label='|e>',marker='o',c='red')
+    ax[2].scatter(np.abs(np.imag(new_a2)[::5]),np.abs(np.real(new_a2)[::5]),label='|g>',marker='x',c='blue')
+    ax[2].legend()
+    ax[2].set_xlabel('Q quadrature [a.u.]')
+    ax[2].set_ylabel('I quadrature [a.u.]')
+
+    plt.show()
+    fig.savefig('../plots/figure4.png')
+
+def figure5(*args):
     # for this experiment
 
     omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi = args
@@ -368,8 +451,8 @@ def cavity_bloch_numerical():
     gamma_phi = 2 * gamma_1
 
     # figure2cd(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
-    figure3(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
-    # figure4(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
+    # figure3(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
+    figure4(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
 
 
 if __name__ == "__main__":
