@@ -155,7 +155,7 @@ def figure2cd(*args):
         #
         # plt.show()
 
-    t = np.copy(times) / 1000
+    t = np.copy(result.t) / 1000
     t_step = t[1] - t[0]
     delta_rm_step = (delta_rms[-1] - delta_rms[0]) / (len(delta_rms) - 1)
 
@@ -185,6 +185,91 @@ def figure2cd(*args):
     fig.subplots_adjust(wspace=0)
     plt.show()
 
+
+def figure3(*args):
+    # for this experiment
+
+    omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi = args
+
+    epsilon_m = np.sqrt(kappa / 2)
+    omega_m = omega_r - chi
+
+    omega_s = omega_a + 3 * chi
+    delta_as = omega_a - omega_s
+
+    Omega = 0.05 * 2 * np.pi
+
+    tspan = (-500, 2000)
+
+    # evaluate at these times
+    t_eval = [-100, 180, 740]
+
+    delta_rms = np.linspace(5 * chi, -4 * chi, 100)
+    # delta_rms = [-chi, 0, chi]
+
+    I_data = np.zeros((4, len(delta_rms)))
+    Q_data = np.zeros((4, len(delta_rms)))
+
+    for i in range(len(delta_rms)):
+        delta_rm = delta_rms[i]
+
+        args = delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi
+
+        # initial variables
+
+        # steady state
+        a0 = -epsilon_m / (delta_rm - chi - 1j * kappa / 2)
+        sigmaz0 = -1
+        sigmax0 = 0
+        sigmay0 = 0
+        a_sigmaz0 = a0 * sigmaz0
+        a_sigmax0 = a0 * sigmax0
+        a_sigmay0 = a0 * sigmay0
+        adagger_a0 = -2 * epsilon_m / kappa * np.imag(a0)
+
+        y0 = np.array([a0, sigmaz0, sigmay0, sigmax0, a_sigmaz0, a_sigmay0, a_sigmax0, adagger_a0])
+
+        result = solve_ivp(cavity_bloch_equations_resonant_time_drive_short_pulse, tspan, y0, t_eval=t_eval, args=args,
+                           max_step=1)
+
+        y = result.y
+
+        a = y[0, :]
+        sigmaz = np.real(y[1, :])
+        sigmax = np.real(y[2, :])
+        sigmay = np.real(y[3, :])
+        a_sigmaz = y[4, :]
+        a_sigmax = y[5, :]
+        a_sigmay = y[6, :]
+        adagger_a = np.real(y[7, :])
+
+        I_data[:-1, i] = np.real(a)
+        Q_data[:-1, i] = np.imag(a)
+
+        # add |e> steady state values
+
+        I_data[-1, i] = -epsilon_m * (delta_rm + chi) / (np.power(delta_rm + chi, 2) + np.power(kappa / 2, 2))
+        Q_data[-1, i] = -epsilon_m * (kappa / 2) / (np.power(delta_rm + chi, 2) + np.power(kappa / 2, 2))
+
+    fig, axes = plt.subplots(2, 1, figsize=(8, 5))
+
+    labels = ["0 ns", "180 ns", "740 ns", "excited state infinite lifetime"]
+    colors = ["red", "blue", "lime", "black"]
+
+    for i in range(I_data.shape[0]):
+        axes[0].plot(-delta_rms, -Q_data[i, :], color=colors[i], label=labels[i])
+        axes[1].plot(-delta_rms, I_data[i, :], color=colors[i], label=labels[i])
+
+    axes[0].set_xlabel("Detuning $-\Delta_{rm}/\chi$")
+    axes[0].set_ylabel("Q")
+    axes[0].legend()
+
+    axes[1].set_xlabel("Detuning $-\Delta_{rm}/\chi$")
+    axes[1].set_ylabel("I")
+    axes[1].legend()
+
+    plt.tight_layout()
+    plt.show()
 
 
 def figure4(*args):
@@ -282,7 +367,8 @@ def cavity_bloch_numerical():
     # gamma_phi not given
     gamma_phi = 2 * gamma_1
 
-    figure2cd(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
+    # figure2cd(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
+    figure3(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
     # figure4(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
 
 
