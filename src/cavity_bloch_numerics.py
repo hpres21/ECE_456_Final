@@ -4,7 +4,8 @@ from scipy.integrate import solve_ivp
 
 from cavity_bloch_util import cavity_bloch_equations_resonant_time_drive_short_pulse, \
     cavity_bloch_equations_resonant_time_drive_pulsed_measurement, \
-    cavity_bloch_equations_resonant_time_drive_variable_pulse_length
+    cavity_bloch_equations_resonant_time_drive_variable_pulse_length, \
+    cavity_bloch_equations_resonant_time_drive
 
 
 def rotate_IQ(a):
@@ -64,26 +65,53 @@ def figure2bc(*args):
     a_sigmay = y[6, :]
     adagger_a = np.real(y[7, :])
 
-    # plt.plot(result.t, sigmaz, label="sigma_z")
-    # plt.plot(result.t, adagger_a, label="adag a")
-    plt.plot(result.t, np.real(a), label="I")
-    plt.plot(result.t, np.imag(a), label="Q")
 
-    # plt.plot(result.t, sigmax, label="sigmax")
-    # plt.plot(result.t, sigmay, label="sigmay")
-    # plt.plot(result.t, np.imag(a_sigmax), label="imag(a_sigmax)")
-    # plt.plot(result.t, np.imag(a_sigmay), label="imag(a_sigmay)")
-    # plt.plot(result.t, np.imag(a_sigmaz), label="imag(a_sigmaz)")
+    # # plt.plot(result.t, sigmaz, label="sigma_z")
+    # # plt.plot(result.t, adagger_a, label="adag a")
+    # plt.plot(result.t, np.real(a), label="I")
+    # plt.plot(result.t, np.imag(a), label="Q")
+    #
+    # # plt.plot(result.t, sigmax, label="sigmax")
+    # # plt.plot(result.t, sigmay, label="sigmay")
+    # # plt.plot(result.t, np.imag(a_sigmax), label="imag(a_sigmax)")
+    # # plt.plot(result.t, np.imag(a_sigmay), label="imag(a_sigmay)")
+    # # plt.plot(result.t, np.imag(a_sigmaz), label="imag(a_sigmaz)")
+    #
+    # plt.xlabel("t (ns)")
+    # plt.ylabel("Populations")
+    #
+    # plt.title("Pi Pulse with decay")
+    #
+    # plt.legend()
+    # plt.show()
 
-    plt.xlabel("t (ns)")
-    plt.ylabel("Populations")
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
 
-    plt.title("Pi Pulse with decay")
+    axes[0].plot(result.t/1000, -4-np.imag(a), color='black')
+    axes[0].set_ylim(0, 10)
 
-    plt.legend()
+    axes[0].set_xlabel("Times $[\mu s]$")
+    axes[0].set_xticks(np.arange(0, 1.6, 0.5))
+    axes[0].set_ylabel("Q [a.u.]")
+
+    axes[1].plot(result.t/1000, np.real(a), color='black')
+
+    axes[1].set_xlabel("Times $[\mu s]$")
+    axes[1].set_xticks(np.arange(0, 1.6, 0.5))
+    axes[1].set_ylim(0, 10)
+
+    # axes[1].set_yticklabels([])
+    # axes[1].tick_params(axis='y', direction="inout", length=10)
+
+    axes[1].yaxis.set_label_position("right")
+    axes[1].yaxis.tick_right()
+    axes[1].set_ylabel("I [a.u.]")
+
+    fig.suptitle("Cavity response to a weak measurement for $\Delta_{mr} = -\chi$")
+
+    fig.subplots_adjust(wspace=0)
     plt.show()
 
-    plt.show()
 
 
 def figure2de(*args):
@@ -96,11 +124,11 @@ def figure2de(*args):
 
     Omega = 0.05 * 2 * np.pi
 
-    num_points = 2501
+    num_points = 1001
     tspan = (-500, 2000)
     times = np.linspace(*tspan, num_points)
 
-    delta_rms = np.linspace(5 * chi, -4 * chi, 100)
+    delta_rms = np.linspace(-5 * chi, 4 * chi, 50)
 
     sweep_data = np.zeros((len(delta_rms), num_points), dtype=complex)
 
@@ -159,6 +187,7 @@ def figure2de(*args):
     t = np.copy(result.t) / 1000
     t_step = t[1] - t[0]
     delta_rm_step = (delta_rms[-1] - delta_rms[0]) / (len(delta_rms) - 1)
+    delta_rms *= -1
 
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
@@ -168,7 +197,7 @@ def figure2de(*args):
     # plt.colorbar()
     axes[0].set_xlabel("Times $[\mu s]$")
     axes[0].set_xticks(np.arange(0, 1.6, 0.5))
-    axes[0].set_ylabel("Detuning $\Delta_{rm}/\chi$")
+    axes[0].set_ylabel("Detuning $\Delta_{mr}/\chi$")
     axes[0].set_title("Q")
 
     axes[1].imshow(np.abs(np.real(sweep_data)), cmap='Reds', vmin=0, vmax=14, aspect='auto', origin='lower',
@@ -181,7 +210,7 @@ def figure2de(*args):
     axes[1].set_yticklabels([])
     axes[1].tick_params(axis='y', direction="inout", length=10)
 
-    plt.title("Cavity response to a weak measurement")
+    fig.suptitle("Cavity response to a weak measurement")
 
     fig.subplots_adjust(wspace=0)
     plt.show()
@@ -205,7 +234,7 @@ def figure3(*args):
     # evaluate at these times
     t_eval = [-100, 180, 740]
 
-    delta_rms = np.linspace(5 * chi, -4 * chi, 100)
+    delta_rms = np.linspace(-5 * chi, 4 * chi, 100)
     # delta_rms = [-chi, 0, chi]
 
     I_data = np.zeros((4, len(delta_rms)))
@@ -258,16 +287,18 @@ def figure3(*args):
     colors = ["red", "blue", "lime", "black"]
 
     for i in range(I_data.shape[0]):
-        axes[0].plot(-delta_rms, -Q_data[i, :], color=colors[i], label=labels[i])
-        axes[1].plot(-delta_rms, I_data[i, :], color=colors[i], label=labels[i])
+        axes[0].plot(delta_rms / chi, -Q_data[i, :], color=colors[i], label=labels[i])
+        axes[1].plot(delta_rms / chi, I_data[i, :], color=colors[i], label=labels[i])
 
-    axes[0].set_xlabel("Detuning $-\Delta_{rm}/\chi$")
-    axes[0].set_ylabel("Q")
+    axes[0].set_xlabel("Detuning $-\Delta_{mr}/\chi$")
+    axes[0].set_ylabel("Q [a.u.]")
     axes[0].legend()
 
-    axes[1].set_xlabel("Detuning $-\Delta_{rm}/\chi$")
-    axes[1].set_ylabel("I")
+    axes[1].set_xlabel("Detuning $-\Delta_{mr}/\chi$")
+    axes[1].set_ylabel("I [a.u.]")
     axes[1].legend()
+
+    fig.suptitle("Resonator Transmission Spectrum")
 
     plt.tight_layout()
     plt.show()
@@ -333,12 +364,11 @@ def figure4(*args):
     adagger_a2 = np.real(y2[7, :])
     new_a2 = rotate_IQ(a2)
 
-    fig, ax = plt.subplots(3, 1, figsize=(8, 15))
+    fig, ax = plt.subplots(3, 1, figsize=(6, 8))
     ax[0].plot(result.t / 1000, np.abs(np.imag(new_a)), label="|e>", c='red')
     ax[0].plot(result.t / 1000, np.abs(np.imag(new_a2)), label="|g>", c='blue')
     ax[0].set_xlabel("Time (us)")
     ax[0].set_ylabel("Q [a.u.]")
-    ax[0].set_title("Figure 4")
     ax[0].legend()
 
     ax[1].plot(result.t / 1000, np.abs(np.real(new_a)), label='|e>', c='red')
@@ -354,9 +384,10 @@ def figure4(*args):
     ax[2].set_xlabel('Q quadrature [a.u.]')
     ax[2].set_ylabel('I quadrature [a.u.]')
 
+    fig.suptitle("Cavity Response for a Pulsed Measurement")
+
     plt.tight_layout()
     plt.show()
-    fig.savefig('../plots/figure4.png')
 
 
 def figure5(*args):
@@ -423,94 +454,201 @@ def figure5(*args):
         sweep_data_ground[i, :] = a_ground
         sweep_data_excited[i, :] = a_excited
 
+    # single traces
+    delta_rms_trace = np.array([-1, 0.5, 2]) * chi
+    single_trace_data_g = np.zeros((len(delta_rms_trace), num_points), dtype=complex)
+    single_trace_data_e = np.zeros((len(delta_rms_trace), num_points), dtype=complex)
+
+    for i in range(len(delta_rms_trace)):
+        delta_rm = delta_rms_trace[i]
+
+        args = delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi
+
+        result_ground = solve_ivp(cavity_bloch_equations_resonant_time_drive_pulsed_measurement, tspan, y0_ground,
+                                  t_eval=times,
+                                  args=args, max_step=1)
+
+        result_excited = solve_ivp(cavity_bloch_equations_resonant_time_drive_pulsed_measurement, tspan, y0_excited,
+                                   t_eval=times,
+                                   args=args, max_step=1)
+
+        y_ground = result_ground.y
+        y_excited = result_excited.y
+
+        a_ground = y_ground[0, :]
+        a_excited = y_excited[0, :]
+
+        a_ground = rotate_IQ(a_ground)
+        a_excited = rotate_IQ(a_excited)
+
+        single_trace_data_g[i, :] = a_ground
+        single_trace_data_e[i, :] = a_excited
+
     t = np.copy(result_ground.t) / 1000
     t_step = t[1] - t[0]
     delta_rm_step = (delta_rms[-1] - delta_rms[0]) / (len(delta_rms) - 1)
 
 
-    # Fig 5a
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    # Fig 5a ----------------------------------
+    fig, axes = plt.subplots(2, 2, figsize=(10, 8), gridspec_kw={'height_ratios': [2, 1], 'width_ratios': [1, 1]})
 
-    im1 = axes[0].imshow(np.imag(sweep_data_ground), cmap='seismic', vmin=-30, vmax=30, aspect='auto', origin='lower',
-                         extent=(t[0] - t_step / 2, t[-1] + t_step / 2, (delta_rms[0] - delta_rm_step / 2) / chi,
-                                 (delta_rms[-1] + delta_rm_step / 2) / chi), )
+    im1 = axes[0, 0].imshow(np.imag(sweep_data_ground), cmap='seismic', vmin=-30, vmax=30, aspect='auto',
+                            origin='lower',
+                            extent=(t[0] - t_step / 2, t[-1] + t_step / 2, (delta_rms[0] - delta_rm_step / 2) / chi,
+                                    (delta_rms[-1] + delta_rm_step / 2) / chi), )
     # plt.colorbar(im1, ax=axes[0])
-    axes[0].set_xlabel("Times $[\mu s]$")
-    axes[0].set_xticks(np.arange(0, 1.6, 0.5))
-    axes[0].set_ylabel("Detuning $-\Delta_{rm}/\chi$")
-    axes[0].set_title("Q")
+    axes[0, 0].set_xlabel("Times $(\mu s)$")
+    axes[0, 0].set_xticks(np.arange(0, 1.6, 0.5))
+    axes[0, 0].set_ylabel("Detuning $-\Delta_{rm}/\chi$")
+    axes[0, 0].set_title("Q")
 
-    im2 = axes[1].imshow(-np.real(sweep_data_ground), cmap='seismic', vmin=-10, vmax=10, aspect='auto', origin='lower',
-                         extent=(t[0] - t_step / 2, t[-1] + t_step / 2, (delta_rms[0] - delta_rm_step / 2) / chi,
-                                 (delta_rms[-1] + delta_rm_step / 2) / chi))
+    im2 = axes[0, 1].imshow(-np.real(sweep_data_ground), cmap='seismic', vmin=-10, vmax=10, aspect='auto',
+                            origin='lower',
+                            extent=(t[0] - t_step / 2, t[-1] + t_step / 2, (delta_rms[0] - delta_rm_step / 2) / chi,
+                                    (delta_rms[-1] + delta_rm_step / 2) / chi))
 
     # plt.colorbar(im2, ax=axes[1])
-    axes[1].set_xlabel("Times $[\mu s]$")
-    axes[1].set_xticks(np.arange(0, 1.6, 0.5))
-    axes[1].set_title("I")
-    axes[1].set_yticklabels([])
-    axes[1].tick_params(axis='y', direction="inout", length=10)
+    axes[0, 1].set_xlabel("Times $(\mu s)$")
+    axes[0, 1].set_xticks(np.arange(0, 1.6, 0.5))
+    axes[0, 1].set_title("I")
+    axes[0, 1].set_yticklabels([])
+    axes[0, 1].tick_params(axis='y', direction="inout", length=10)
+
+    colors = ['red', 'black', 'blue']
+    for i in range(len(delta_rms_trace)):
+        axes[0, 0].axhline(delta_rms_trace[i] / chi, color=colors[i], linestyle=":")
+        axes[0, 1].axhline(delta_rms_trace[i] / chi, color=colors[i], linestyle=":")
+
+        axes[1, 0].plot(t, np.imag(single_trace_data_g[i, :]), color=colors[i],
+                        label=f"$\Delta_{{mr}} \\approx$ {-delta_rms_trace[i] / chi}$\chi$")
+        axes[1, 1].plot(t, -np.real(single_trace_data_g[i, :]), color=colors[i],
+                        label=f"$\Delta_{{mr}} \\approx$ {-delta_rms_trace[i] / chi}$\chi$")
+
+    axes[1, 0].set_xticks(np.arange(0, 1.6, 0.5))
+    axes[1, 0].set_xlabel("Times $(\mu s)$")
+    axes[1, 0].set_ylabel("Q [a.u.]")
+    axes[1, 0].set_ylim(-7, 14)
+    axes[1, 0].legend()
+
+    axes[1, 1].set_xticks(np.arange(0, 1.6, 0.5))
+    axes[1, 1].set_xlabel("Times $(\mu s)$")
+    axes[1, 1].yaxis.set_label_position("right")
+    axes[1, 1].yaxis.tick_right()
+    axes[1, 1].set_ylabel("I [a.u.]")
+    axes[1, 1].set_ylim(-7, 14)
+    axes[1, 1].legend()
 
     fig.suptitle("Cavity response to a strong measurement in ground state")
 
+    fig.tight_layout()
     fig.subplots_adjust(wspace=0)
     plt.show()
 
-    # Fig 5b
+    # Fig 5b ----------------------------------
 
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    fig, axes = plt.subplots(2, 2, figsize=(10, 8), gridspec_kw={'height_ratios': [2, 1], 'width_ratios': [1, 1]})
 
-    im1 = axes[0].imshow(np.imag(sweep_data_excited), cmap='seismic', vmin=-30, vmax=30, aspect='auto', origin='lower',
-                         extent=(t[0] - t_step / 2, t[-1] + t_step / 2, (delta_rms[0] - delta_rm_step / 2) / chi,
-                                 (delta_rms[-1] + delta_rm_step / 2) / chi), )
+    im1 = axes[0, 0].imshow(np.imag(sweep_data_excited), cmap='seismic', vmin=-30, vmax=30, aspect='auto',
+                            origin='lower',
+                            extent=(t[0] - t_step / 2, t[-1] + t_step / 2, (delta_rms[0] - delta_rm_step / 2) / chi,
+                                    (delta_rms[-1] + delta_rm_step / 2) / chi), )
 
     # plt.colorbar(im1, ax=axes[0])
-    axes[0].set_xlabel("Times $[\mu s]$")
-    axes[0].set_xticks(np.arange(0, 1.6, 0.5))
-    axes[0].set_ylabel("Detuning $-\Delta_{rm}/\chi$")
-    axes[0].set_title("Q")
+    axes[0, 0].set_xlabel("Times $[\mu s]$")
+    axes[0, 0].set_xticks(np.arange(0, 1.6, 0.5))
+    axes[0, 0].set_ylabel("Detuning $-\Delta_{rm}/\chi$")
+    axes[0, 0].set_title("Q")
 
-    im2 = axes[1].imshow(-np.real(sweep_data_excited), cmap='seismic', vmin=-12, vmax=12, aspect='auto', origin='lower',
-                         extent=(t[0] - t_step / 2, t[-1] + t_step / 2, (delta_rms[0] - delta_rm_step / 2) / chi,
-                                 (delta_rms[-1] + delta_rm_step / 2) / chi))
+    im2 = axes[0, 1].imshow(-np.real(sweep_data_excited), cmap='seismic', vmin=-12, vmax=12, aspect='auto',
+                            origin='lower',
+                            extent=(t[0] - t_step / 2, t[-1] + t_step / 2, (delta_rms[0] - delta_rm_step / 2) / chi,
+                                    (delta_rms[-1] + delta_rm_step / 2) / chi))
 
     # plt.colorbar(im2, ax=axes[1])
-    axes[1].set_xlabel("Times $[\mu s]$")
-    axes[1].set_xticks(np.arange(0, 1.6, 0.5))
-    axes[1].set_title("I")
-    axes[1].set_yticklabels([])
-    axes[1].tick_params(axis='y', direction="inout", length=10)
+    axes[0, 1].set_xlabel("Times $[\mu s]$")
+    axes[0, 1].set_xticks(np.arange(0, 1.6, 0.5))
+    axes[0, 1].set_title("I")
+    axes[0, 1].set_yticklabels([])
+    axes[0, 1].tick_params(axis='y', direction="inout", length=10)
+
+    colors = ['red', 'black', 'blue']
+    for i in range(len(delta_rms_trace)):
+        axes[0, 0].axhline(delta_rms_trace[i] / chi, color=colors[i], linestyle=":")
+        axes[0, 1].axhline(delta_rms_trace[i] / chi, color=colors[i], linestyle=":")
+
+        axes[1, 0].plot(t, np.imag(single_trace_data_e[i, :]), color=colors[i],
+                        label=f"$\Delta_{{mr}} \\approx$ {-delta_rms_trace[i] / chi}$\chi$")
+        axes[1, 1].plot(t, -np.real(single_trace_data_e[i, :]), color=colors[i],
+                        label=f"$\Delta_{{mr}} \\approx$ {-delta_rms_trace[i] / chi}$\chi$")
+
+    axes[1, 0].set_xticks(np.arange(0, 1.6, 0.5))
+    axes[1, 0].set_xlabel("Times $(\mu s)$")
+    axes[1, 0].set_ylabel("Q [a.u.]")
+    axes[1, 0].set_ylim(-7, 14)
+    axes[1, 0].legend()
+
+    axes[1, 1].set_xticks(np.arange(0, 1.6, 0.5))
+    axes[1, 1].set_xlabel("Times $(\mu s)$")
+    axes[1, 1].yaxis.set_label_position("right")
+    axes[1, 1].yaxis.tick_right()
+    axes[1, 1].set_ylabel("I [a.u.]")
+    axes[1, 1].set_ylim(-7, 14)
+    axes[1, 1].legend()
 
     fig.suptitle("Cavity response to a strong measurement in excited state")
 
     fig.subplots_adjust(wspace=0)
     plt.show()
 
-    # Fig 5c
+    # Fig 5c ----------------------------------
 
     difference = sweep_data_excited - sweep_data_ground
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    fig, axes = plt.subplots(2, 2, figsize=(10, 8), gridspec_kw={'height_ratios': [2, 1], 'width_ratios': [1, 1]})
 
-    im1 = axes[0].imshow(np.imag(difference), cmap='seismic', vmin=-10, vmax=10, aspect='auto', origin='lower',
-                         extent=(t[0] - t_step / 2, t[-1] + t_step / 2, (delta_rms[0] - delta_rm_step / 2) / chi,
-                                 (delta_rms[-1] + delta_rm_step / 2) / chi), )
+    im1 = axes[0, 0].imshow(np.imag(difference), cmap='seismic', vmin=-10, vmax=10, aspect='auto', origin='lower',
+                            extent=(t[0] - t_step / 2, t[-1] + t_step / 2, (delta_rms[0] - delta_rm_step / 2) / chi,
+                                    (delta_rms[-1] + delta_rm_step / 2) / chi), )
 
     # plt.colorbar(im1, ax=axes[0])
-    axes[0].set_xlabel("Times $[\mu s]$")
-    axes[0].set_xticks(np.arange(0, 1.6, 0.5))
-    axes[0].set_ylabel("Detuning $-\Delta_{rm}/\chi$")
-    axes[0].set_title("Q")
+    axes[0, 0].set_xlabel("Times $[\mu s]$")
+    axes[0, 0].set_xticks(np.arange(0, 1.6, 0.5))
+    axes[0, 0].set_ylabel("Detuning $-\Delta_{rm}/\chi$")
+    axes[0, 0].set_title("Q")
 
-    im2 = axes[1].imshow(-np.real(difference), cmap='seismic', vmin=-10, vmax=10, aspect='auto', origin='lower',
-                         extent=(t[0] - t_step / 2, t[-1] + t_step / 2, (delta_rms[0] - delta_rm_step / 2) / chi,
-                                 (delta_rms[-1] + delta_rm_step / 2) / chi))
+    im2 = axes[0, 1].imshow(-np.real(difference), cmap='seismic', vmin=-10, vmax=10, aspect='auto', origin='lower',
+                            extent=(t[0] - t_step / 2, t[-1] + t_step / 2, (delta_rms[0] - delta_rm_step / 2) / chi,
+                                    (delta_rms[-1] + delta_rm_step / 2) / chi))
 
     # plt.colorbar(im2, ax=axes[1])
-    axes[1].set_xlabel("Times $[\mu s]$")
-    axes[1].set_xticks(np.arange(0, 1.6, 0.5))
-    axes[1].set_title("I")
-    axes[1].set_yticklabels([])
-    axes[1].tick_params(axis='y', direction="inout", length=10)
+    axes[0, 1].set_xlabel("Times $[\mu s]$")
+    axes[0, 1].set_xticks(np.arange(0, 1.6, 0.5))
+    axes[0, 1].set_title("I")
+    axes[0, 1].set_yticklabels([])
+    axes[0, 1].tick_params(axis='y', direction="inout", length=10)
+
+    colors = ['red', 'black', 'blue']
+    for i in range(len(delta_rms_trace)):
+        axes[0, 0].axhline(delta_rms_trace[i] / chi, color=colors[i], linestyle=":")
+        axes[0, 1].axhline(delta_rms_trace[i] / chi, color=colors[i], linestyle=":")
+
+        axes[1, 0].plot(t, np.imag((single_trace_data_e - single_trace_data_g)[i, :]), color=colors[i],
+                        label=f"$\Delta_{{mr}} \\approx$ {-delta_rms_trace[i] / chi}$\chi$")
+        axes[1, 1].plot(t, -np.real((single_trace_data_e - single_trace_data_g)[i, :]), color=colors[i],
+                        label=f"$\Delta_{{mr}} \\approx$ {-delta_rms_trace[i] / chi}$\chi$")
+
+    axes[1, 0].set_xticks(np.arange(0, 1.6, 0.5))
+    axes[1, 0].set_xlabel("Times $(\mu s)$")
+    axes[1, 0].set_ylabel("Q [a.u.]")
+    axes[1, 0].set_ylim(-7, 14)
+    axes[1, 0].legend()
+
+    axes[1, 1].set_xticks(np.arange(0, 1.6, 0.5))
+    axes[1, 1].set_xlabel("Times $(\mu s)$")
+    axes[1, 1].yaxis.set_label_position("right")
+    axes[1, 1].yaxis.tick_right()
+    axes[1, 1].set_ylabel("I [a.u.]")
+    axes[1, 1].set_ylim(-7, 14)
+    axes[1, 1].legend()
 
     fig.suptitle("Difference between excited and ground state sweeps")
 
@@ -619,16 +757,148 @@ def figure6(*args):
         s_rho_I = np.real(sweep_data[i, start_index:])
         s_rho_Q = np.imag(sweep_data[i, start_index:])
 
-        p_e_I = np.sum(np.divide((s_rho_I - I_g), (I_e - I_g))) * dt / measurement_pulse_length
-        p_e_Q = np.sum(np.divide((s_rho_Q - Q_g), (Q_e - Q_g))) * dt / measurement_pulse_length
+        p_e_I = np.sum(np.divide((s_rho_I - I_g), (I_e - I_g))) * dt / (measurement_pulse_length - start_index*dt)
+        p_e_Q = np.sum(np.divide((s_rho_Q - Q_g), (Q_e - Q_g))) * dt / (measurement_pulse_length - start_index*dt)
 
         p_e_array[:, i] = np.array([p_e_Q, p_e_I])
 
-    plt.plot(pulse_lengths, p_e_array[0, :], label="Q")
+    plt.plot(pulse_lengths, p_e_array[0, :], color='blue', marker='o', linestyle='', label="Q data reconstruction")
     # plt.plot(pulse_lengths, p_e_array[1, :], label="I")
+
+    # get expected sigma_z behavior
+
+    # initial variables
+    a0 = 0j
+    sigmaz0 = -1
+    sigmax0 = 0
+    sigmay0 = 0
+    a_sigmaz0 = a0 * sigmaz0
+    a_sigmax0 = a0 * sigmax0
+    a_sigmay0 = a0 * sigmay0
+    adagger_a0 = 0
+
+    epsilon_m = 0
+    args = delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi
+
+    tspan = (pulse_lengths[0], pulse_lengths[-1])
+    result = solve_ivp(cavity_bloch_equations_resonant_time_drive, tspan, y0_g, t_eval=pulse_lengths,
+                       args=args)
+    plt.plot(pulse_lengths, np.real(1/2*(1+result.y[1])), color='black', linestyle=':', label="Expected Rabi oscillation")
+
+    plt.ylabel("$P_e$")
+    plt.xlabel("Pulse length (ns)")
+
+    plt.title("Rabi oscillation reconstruction using integrated Q data")
 
     plt.legend()
     plt.show()
+
+
+def show_steady_state(*args):
+    omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi = args
+
+    epsilon_m = np.sqrt(kappa / 2) / 10
+    omega_m = omega_r - chi
+
+    omega_s = omega_a + 3 * chi
+    delta_as = omega_a - omega_s
+    delta_rm = omega_r - omega_m
+
+    Omega = 0
+
+    args = delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi
+
+    # initial variables
+
+    # vacuum state
+    a0 = 0j
+    sigmaz0 = -1
+    sigmax0 = 0
+    sigmay0 = 0
+    a_sigmaz0 = a0 * sigmaz0
+    a_sigmax0 = a0 * sigmax0
+    a_sigmay0 = a0 * sigmay0
+    adagger_a0 = 0
+
+    y0 = np.array([a0, sigmaz0, sigmay0, sigmax0, a_sigmaz0, a_sigmay0, a_sigmax0, adagger_a0])
+
+    num_points = 2000
+    tspan = (0, 2000)
+    times = np.linspace(*tspan, num_points)
+
+    result_vacuum = solve_ivp(cavity_bloch_equations_resonant_time_drive, tspan, y0, t_eval=times, args=args)
+
+    y = result_vacuum.y
+
+    a = y[0, :]
+    sigmaz = np.real(y[1, :])
+    sigmax = np.real(y[2, :])
+    sigmay = np.real(y[3, :])
+    a_sigmaz = y[4, :]
+    a_sigmax = y[5, :]
+    a_sigmay = y[6, :]
+    adagger_a = np.real(y[7, :])
+
+    plt.plot(result_vacuum.t, sigmaz, label="Qubit population")
+    plt.plot(result_vacuum.t, adagger_a, label="Cavity population")
+    # plt.plot(result_vacuum.t, np.real(a), label="I")
+    # plt.plot(result_vacuum.t, np.imag(a), label="Q")
+    plt.axhline(10, color='black', linestyle=':', label='Number of cavity levels simulated in QuTiP')
+
+
+    plt.xlabel("t (ns)")
+    plt.ylabel("Populations")
+
+    plt.title("Steady state under constant measurement drive")
+
+    plt.legend()
+    plt.show()
+
+    # initial variables
+
+    args = delta_rm, chi, epsilon_m, kappa, Omega, gamma_1, delta_as, gamma_phi
+
+    # steady state
+    a0 = -epsilon_m / (delta_rm - chi - 1j * kappa / 2)
+    sigmaz0 = -1
+    sigmax0 = 0
+    sigmay0 = 0
+    a_sigmaz0 = a0 * sigmaz0
+    a_sigmax0 = a0 * sigmax0
+    a_sigmay0 = a0 * sigmay0
+    adagger_a0 = -2 * epsilon_m / kappa * np.imag(a0)
+
+    y0 = np.array([a0, sigmaz0, sigmay0, sigmax0, a_sigmaz0, a_sigmay0, a_sigmax0, adagger_a0])
+
+    result_ss = solve_ivp(cavity_bloch_equations_resonant_time_drive_short_pulse, tspan, y0, t_eval=times, args=args,
+                       max_step=1)
+
+    y = result_ss.y
+
+    a = y[0, :]
+    sigmaz = np.real(y[1, :])
+    sigmax = np.real(y[2, :])
+    sigmay = np.real(y[3, :])
+    a_sigmaz = y[4, :]
+    a_sigmax = y[5, :]
+    a_sigmay = y[6, :]
+    adagger_a = np.real(y[7, :])
+
+    plt.plot(result_vacuum.t, sigmaz, label="Qubit population")
+    plt.plot(result_vacuum.t, adagger_a, label="Cavity population")
+    plt.plot(result_vacuum.t, np.real(a), label="I")
+    plt.plot(result_vacuum.t, np.imag(a), label="Q")
+
+
+    plt.xlabel("t (ns)")
+    plt.ylabel("Populations")
+
+    plt.title("System steady state")
+
+    plt.legend()
+    plt.show()
+
+
 
 
 def cavity_bloch_numerical():
@@ -648,11 +918,13 @@ def cavity_bloch_numerical():
     # gamma_phi not given
     gamma_phi = 2 * gamma_1
 
+    # figure2bc(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
     # figure2de(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
     # figure3(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
     # figure4(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
     # figure5(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
-    figure6(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
+    # figure6(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
+    show_steady_state(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
 
 
 if __name__ == "__main__":

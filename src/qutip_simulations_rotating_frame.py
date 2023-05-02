@@ -28,9 +28,9 @@ def get_Hamiltonian(num_levels, delta_rm, delta_as, chi, epsilon_m=None, Omega=N
 
     H = [H_disp]
 
-    H_drive_m = hbar * a.dag() + a
+    H_drive_m = hbar * (a.dag() + a)
 
-    H_drive_s = hbar * sigma_p + sigma_m
+    H_drive_s = hbar * (sigma_p + sigma_m)
 
     if not measurement_drive is None:
         H.append([H_drive_m, measurement_drive])
