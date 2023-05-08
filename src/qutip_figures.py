@@ -896,7 +896,90 @@ def figure6():
     # print(sweep_data.shape)
 
 
+def show_too_few_levels_problem():
+    omega_r = 6.44252 * 2 * np.pi
+    omega_a = 4.009 * 2 * np.pi
 
+    chi = -0.00069 * 2 * np.pi
+
+    kappa = 0.00169 * 2 * np.pi
+    gamma_1 = 0.00019 * 2 * np.pi
+
+    # gamma_phi not given
+    gamma_phi = 2 * gamma_1
+
+    epsilon_m = np.sqrt(kappa / 2)
+    omega_m = omega_r - chi
+
+    # pick omega so that pulse lasts 10 ns
+    Omega = 0.025 * 2 * np.pi
+    # lamb shift
+    omega_s = omega_a + chi
+
+    delta_rm = omega_r - omega_m
+    delta_as = omega_a - omega_s
+
+    t1 = 0
+    t2 = t1 + 10
+
+    args = {
+        "epsilon_m": epsilon_m,
+        "omega_m": omega_m,
+        "Omega": Omega,
+        "omega_s": omega_s,
+        "t1": t1,
+        "t2": t2
+    }
+
+    def H_qubit_drive(t, args):
+        Omega = args["Omega"]
+        t1 = args["t1"]
+        t2 = args["t2"]
+        if t1 < t <= t2:
+            return Omega
+        else:
+            return 0
+
+    num_levels = 10
+    H = get_Hamiltonian(num_levels, delta_rm, delta_as, chi, epsilon_m, Omega, qubit_drive=H_qubit_drive)
+
+    times = np.linspace(-250, 2000, 501)
+
+    steady_state_a = -epsilon_m / (delta_rm - chi - 1j * kappa / 2)
+    steady_state_n = -2 * epsilon_m / kappa * np.imag(steady_state_a)
+
+    print(steady_state_n)
+
+    # psi0 = qt.tensor(qt.basis(num_levels, 0), qt.basis(2, 0))
+    alpha = steady_state_a
+    psi0 = qt.tensor(qt.coherent(num_levels, alpha), qt.basis(2, 0))
+
+    a = qt.tensor(qt.destroy(num_levels), qt.qeye(2))
+    sigma_m = qt.tensor(qt.qeye(num_levels), qt.destroy(2))
+    sigma_z = qt.tensor(qt.qeye(num_levels), -qt.sigmaz())
+
+    collapse_operators = [
+        np.sqrt(kappa) * a,
+        np.sqrt(gamma_1) * sigma_m,
+        np.sqrt(gamma_phi) * sigma_z,
+    ]
+
+    options = qt.Options(max_step=1)
+    result = qt.mesolve(H, psi0, times, collapse_operators, [sigma_m.dag() * sigma_m, a.dag() * a, a], args, options)
+
+    plt.plot(result.times, result.expect[0], label="Qubit population")
+    plt.plot(result.times, result.expect[1], label="Cavity population")
+    # plt.plot(result.times, np.real(result.expect[2]), label="I")
+    # plt.plot(result.times, np.imag(result.expect[2]), label="Q")
+    plt.axhline(10, color='black', linestyle=':', label='Number of cavity levels simulated in QuTiP')
+
+    plt.xlabel("t (ns)")
+    plt.ylabel("Populations")
+
+    plt.title("QuTiP simulations with strong measurement drive")
+
+    plt.legend()
+    plt.show()
 
 if __name__ == "__main__":
     # figure2bc()
@@ -904,4 +987,5 @@ if __name__ == "__main__":
     # figure3()
     # figure4()
     # figure5()
-    figure6()
+    # figure6()
+    show_too_few_levels_problem()
