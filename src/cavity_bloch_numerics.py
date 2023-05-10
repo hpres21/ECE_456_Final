@@ -5,13 +5,8 @@ from scipy.integrate import solve_ivp
 from cavity_bloch_util import cavity_bloch_equations_resonant_time_drive_short_pulse, \
     cavity_bloch_equations_resonant_time_drive_pulsed_measurement, \
     cavity_bloch_equations_resonant_time_drive_variable_pulse_length, \
-    cavity_bloch_equations_resonant_time_drive
+    cavity_bloch_equations_resonant_time_drive, rotate_IQ
 
-
-def rotate_IQ(a):
-    # want last element of Q to be fully imaginary
-    last = a[-1]
-    return a * 1j * np.conjugate(last) / np.abs(last)
 
 
 def figure2bc(*args):
@@ -918,13 +913,13 @@ def cavity_bloch_numerical():
     # gamma_phi not given
     gamma_phi = 2 * gamma_1
 
-    # figure2bc(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
+    figure2bc(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
     # figure2de(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
     # figure3(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
     # figure4(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
     # figure5(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
     # figure6(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
-    show_steady_state(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
+    # show_steady_state(omega_r, kappa, omega_a, g, chi, gamma_1, gamma_phi)
 
 
 if __name__ == "__main__":

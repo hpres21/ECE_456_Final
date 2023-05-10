@@ -1,7 +1,10 @@
 import numpy as np
 from scipy.integrate import solve_ivp
 
-
+def rotate_IQ(a):
+    # want last element of Q to be fully imaginary
+    last = a[-1]
+    return a * 1j * np.conjugate(last) / np.abs(last)
 def cavity_bloch_equations(t, y, *args):
     """
 
